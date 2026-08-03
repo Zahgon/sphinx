@@ -1,16 +1,3 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::{HEADER_INTEGRITY_MAC_SIZE, MAX_PATH_LENGTH, NODE_META_INFO_SIZE};
 use crate::crypto;
@@ -23,66 +10,21 @@ pub const FILLER_STEP_SIZE_INCREASE: usize = NODE_META_INFO_SIZE + HEADER_INTEGR
 pub struct Filler(Vec<u8>);
 
 impl Filler {
-    pub(crate) fn new(expanded_shared_secrets: &[ExpandedSharedSecret]) -> Self {
-        assert!(expanded_shared_secrets.len() <= MAX_PATH_LENGTH);
-        let filler_value = expanded_shared_secrets
-            .iter()
-            .map(|ess| ess.stream_cipher_key()) // we only want the cipher key
-            .map(|cipher_key| {
-                crypto::generate_pseudorandom_bytes(
-                    cipher_key,
-                    &crypto::STREAM_CIPHER_INIT_VECTOR,
-                    constants::STREAM_CIPHER_OUTPUT_LENGTH,
-                )
-            }) // the actual cipher key is only used to generate the pseudorandom bytes
-            .enumerate() // we need to know index of each element to take correct slice of the PRNG output
-            .map(|(i, pseudorandom_bytes)| (i + 1, pseudorandom_bytes)) // the zeroth step is the empty filler and we add on top of it
-            .fold(
-                Vec::new(),
-                |filler_string_accumulator, (i, pseudorandom_bytes)| {
-                    Self::filler_step(filler_string_accumulator, i, pseudorandom_bytes)
-                },
-            );
-        Self(filler_value)
-    }
+    pub(crate) fn new(expanded_shared_secrets: &[ExpandedSharedSecret]) -> Self { panic!("STUB: not implemented") }
 
     fn filler_step(
         mut filler_string_accumulator: Vec<u8>,
         i: usize,
         pseudorandom_bytes: Vec<u8>,
-    ) -> Vec<u8> {
-        assert_eq!(
-            pseudorandom_bytes.len(),
-            constants::STREAM_CIPHER_OUTPUT_LENGTH
-        );
-        assert_eq!(
-            filler_string_accumulator.len(),
-            FILLER_STEP_SIZE_INCREASE * (i - 1) // make sure it has length of the previous step
-        );
-        let zero_bytes = vec![0u8; FILLER_STEP_SIZE_INCREASE];
-        filler_string_accumulator.extend(&zero_bytes);
-
-        // after computing the output vector of AES_CTR we take the last 3*k*i elements of the returned vector
-        // and xor it with the current filler string
-        utils::bytes::xor_with(
-            &mut filler_string_accumulator,
-            &pseudorandom_bytes[pseudorandom_bytes.len() - i * FILLER_STEP_SIZE_INCREASE..],
-        );
-
-        filler_string_accumulator
-    }
+    ) -> Vec<u8> { panic!("STUB: not implemented") }
 }
 
 impl From<Vec<u8>> for Filler {
-    fn from(raw_bytes: Vec<u8>) -> Self {
-        Self(raw_bytes)
-    }
+    fn from(raw_bytes: Vec<u8>) -> Self { panic!("STUB: not implemented") }
 }
 
 impl From<Filler> for Vec<u8> {
-    fn from(filler: Filler) -> Self {
-        filler.0
-    }
+    fn from(filler: Filler) -> Self { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -188,7 +130,7 @@ mod test_generating_filler_bytes {
                 Filler::filler_step(filler_string_accumulator, 1, pseudorandom_bytes);
             assert_eq!(FILLER_STEP_SIZE_INCREASE, filler_string.len());
             for x in filler_string {
-                assert_eq!(0, x); // XOR of 0 + 0 == 0
+                assert_eq!(0, x); 
             }
         }
 
@@ -200,7 +142,7 @@ mod test_generating_filler_bytes {
                 Filler::filler_step(filler_string_accumulator, 3, pseudorandom_bytes);
             assert_eq!(FILLER_STEP_SIZE_INCREASE * 3, filler_string.len());
             for x in filler_string {
-                assert_eq!(0, x); // XOR of 0 + 0 == 0
+                assert_eq!(0, x); 
             }
         }
 

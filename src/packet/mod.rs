@@ -31,14 +31,7 @@ pub enum ProcessedPacketData {
 }
 
 impl ProcessedPacket {
-    pub fn shared_secret(&self) -> Option<PublicKey> {
-        match &self.data {
-            ProcessedPacketData::ForwardHop {
-                next_hop_packet, ..
-            } => Some(next_hop_packet.shared_secret()),
-            ProcessedPacketData::FinalHop { .. } => None,
-        }
-    }
+    pub fn shared_secret(&self) -> Option<PublicKey> { panic!("STUB: not implemented") }
 }
 
 pub struct SphinxPacket {
@@ -48,78 +41,28 @@ pub struct SphinxPacket {
 
 #[allow(clippy::len_without_is_empty)]
 impl SphinxPacket {
-    // `new` works as before and does not care about changes made; it uses default values everywhere
+    
     pub fn new(
         message: Vec<u8>,
         route: &[Node],
         destination: &Destination,
         delays: &[Delay],
-    ) -> Result<SphinxPacket> {
-        SphinxPacketBuilder::default().build_packet(message, route, destination, delays)
-    }
+    ) -> Result<SphinxPacket> { panic!("STUB: not implemented") }
 
-    pub fn shared_secret(&self) -> PublicKey {
-        self.header.shared_secret
-    }
+    pub fn shared_secret(&self) -> PublicKey { panic!("STUB: not implemented") }
 
-    pub fn len(&self) -> usize {
-        // header always has constant size
-        HEADER_SIZE + self.payload.len()
-    }
+    pub fn len(&self) -> usize { panic!("STUB: not implemented") }
 
-    /// Processes the packet with the provided expanded secret.
-    /// It could be useful in the situation where caller has already derived the value,
-    /// because, for example, he had to obtain the reply tag.
     pub fn process_with_expanded_secret(
         self,
         expanded_shared_secret: &ExpandedSharedSecret,
-    ) -> Result<ProcessedPacket> {
-        let unwrapped_header = self
-            .header
-            .process_with_expanded_secret(expanded_shared_secret)?;
-        let unwrapped_payload = self.payload.unwrap(unwrapped_header.payload_key())?;
+    ) -> Result<ProcessedPacket> { panic!("STUB: not implemented") }
 
-        Ok(unwrapped_header.attach_payload(unwrapped_payload))
-    }
+    pub fn process(self, node_secret_key: &StaticSecret) -> Result<ProcessedPacket> { panic!("STUB: not implemented") }
 
-    // TODO: we should have some list of 'seen shared_keys' for replay detection, but this should be handled by a mix node
-    pub fn process(self, node_secret_key: &StaticSecret) -> Result<ProcessedPacket> {
-        let unwrapped_header = self.header.process(node_secret_key)?;
-        let unwrapped_payload = self.payload.unwrap(unwrapped_header.payload_key())?;
+    pub fn to_bytes(&self) -> Vec<u8> { panic!("STUB: not implemented") }
 
-        Ok(unwrapped_header.attach_payload(unwrapped_payload))
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.header
-            .to_bytes()
-            .iter()
-            .copied()
-            .chain(self.payload.as_bytes().iter().copied())
-            .collect()
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        // with payloads being dynamic in size, the only thing we can do
-        // is to check if it at least is longer than the minimum length
-        if bytes.len() < HEADER_SIZE + PAYLOAD_OVERHEAD_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidPacket,
-                format!(
-                    "tried to recover sphinx packet using {} bytes, expected at least {}",
-                    bytes.len(),
-                    HEADER_SIZE + PAYLOAD_OVERHEAD_SIZE
-                ),
-            ));
-        }
-
-        let header_bytes = &bytes[..HEADER_SIZE];
-        let payload_bytes = &bytes[HEADER_SIZE..];
-        let header = SphinxHeader::from_bytes(header_bytes)?;
-        let payload = Payload::from_bytes(payload_bytes)?;
-
-        Ok(SphinxPacket { header, payload })
-    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]

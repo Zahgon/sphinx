@@ -1,16 +1,3 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::{
     HeaderIntegrityHmacAlgorithm, HeaderIntegrityMacSize, HEADER_INTEGRITY_MAC_SIZE,
@@ -20,57 +7,27 @@ use crate::header::keys::HeaderIntegrityMacKey;
 use digest::array::Array;
 use subtle::{Choice, ConstantTimeEq};
 
-// In paper gamma
 #[derive(Clone, Debug)]
 pub struct HeaderIntegrityMac(Array<u8, HeaderIntegrityMacSize>);
 
 impl HeaderIntegrityMac {
-    pub(crate) fn compute(key: &HeaderIntegrityMacKey, header_data: &[u8]) -> Self {
-        let routing_info_mac =
-            crypto::compute_keyed_hmac::<HeaderIntegrityHmacAlgorithm>(key, header_data);
-
-        // NOTE: BE EXTREMELY CAREFUL HOW YOU MANAGE THOSE BYTES
-        // YOU CAN'T TREAT THEM AS NORMAL ONES
-        let mac_bytes = routing_info_mac.into_bytes();
-        if mac_bytes.len() < HEADER_INTEGRITY_MAC_SIZE {
-            panic!("Algorithm used for computing header integrity mac produced output smaller than minimum length of {}", HEADER_INTEGRITY_MAC_SIZE)
-        }
-
-        // only take first HEADER_INTEGRITY_MAC_SIZE bytes
-        Self(
-            mac_bytes
-                .into_iter()
-                .take(HEADER_INTEGRITY_MAC_SIZE)
-                .collect(),
-        )
-    }
+    pub(crate) fn compute(key: &HeaderIntegrityMacKey, header_data: &[u8]) -> Self { panic!("STUB: not implemented") }
 
     pub fn verify(
         &self,
         integrity_mac_key: &HeaderIntegrityMacKey,
         enc_routing_info: &[u8],
-    ) -> bool {
-        let recomputed_integrity_mac = Self::compute(integrity_mac_key, enc_routing_info);
-        self.ct_eq(&recomputed_integrity_mac).into()
-    }
+    ) -> bool { panic!("STUB: not implemented") }
 
-    pub fn into_inner(self) -> Array<u8, HeaderIntegrityMacSize> {
-        self.0
-    }
+    pub fn into_inner(self) -> Array<u8, HeaderIntegrityMacSize> { panic!("STUB: not implemented") }
 
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.0
-    }
+    pub fn as_bytes(&self) -> &[u8] { panic!("STUB: not implemented") }
 
-    pub fn from_bytes(bytes: [u8; HEADER_INTEGRITY_MAC_SIZE]) -> Self {
-        Self(bytes.into())
-    }
+    pub fn from_bytes(bytes: [u8; HEADER_INTEGRITY_MAC_SIZE]) -> Self { panic!("STUB: not implemented") }
 }
 
 impl ConstantTimeEq for HeaderIntegrityMac {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.0.ct_eq(&other.0)
-    }
+    fn ct_eq(&self, other: &Self) -> Choice { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]

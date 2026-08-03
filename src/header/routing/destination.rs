@@ -1,16 +1,3 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::{
     FINAL_NODE_META_INFO_LENGTH, MAX_PATH_LENGTH, SECURITY_PARAMETER, STREAM_CIPHER_OUTPUT_LENGTH,
@@ -25,70 +12,26 @@ use crate::route::{Destination, DestinationAddressBytes, SURBIdentifier};
 use crate::utils;
 use rand::rng;
 
-// this is going through the following transformations:
-/*
-    FinalRoutingInformation -> PaddedFinalRoutingInformation -> EncryptedPaddedFinalRoutingInformation ->
-    Encrypted Padded Destination with Filler - this can be treated as EncryptedRoutingInformation
-*/
-
-// TODO: perhaps add route_len to all final_routing_info related structs to simplify everything?
-// because it seems weird that say 'encrypt' requires route_len argument
 pub(super) struct FinalRoutingInformation {
     flag: RoutingFlag,
     version: Version,
 
-    // in paper delta
     destination: DestinationAddressBytes,
 
-    // in paper I
     identifier: SURBIdentifier,
 }
 
 impl FinalRoutingInformation {
-    // TODO: this should really return a Result in case the assertion failed
-    pub fn new(dest: &Destination, route_len: usize, version: Version) -> Self {
-        assert!(dest.address.as_bytes_ref().len() <= Self::max_destination_length(route_len));
+    
+    pub fn new(dest: &Destination, route_len: usize, version: Version) -> Self { panic!("STUB: not implemented") }
 
-        Self {
-            flag: FINAL_HOP,
-            version,
-            destination: dest.address,
-            identifier: dest.identifier,
-        }
-    }
+    fn max_destination_length(route_len: usize) -> usize { panic!("STUB: not implemented") }
 
-    fn max_destination_length(route_len: usize) -> usize {
-        (3 * (MAX_PATH_LENGTH - route_len) + 2) * SECURITY_PARAMETER
-    }
+    fn max_padded_destination_identifier_length(route_len: usize) -> usize { panic!("STUB: not implemented") }
 
-    fn max_padded_destination_identifier_length(route_len: usize) -> usize {
-        // this should evaluate to (3 * (MAX_PATH_LENGTH - route_len) + 3) * SECURITY_PARAMETER
-        ENCRYPTED_ROUTING_INFO_SIZE - (FILLER_STEP_SIZE_INCREASE * (route_len - 1))
-    }
-
-    pub(super) fn add_padding(self, route_len: usize) -> PaddedFinalRoutingInformation {
-        // paper uses 0 bytes for this, however, we use random instead so that we would not be affected by the
-        // attack on sphinx described by Kuhn et al.
-        let padding = utils::bytes::random(
-            &mut rng(),
-            ENCRYPTED_ROUTING_INFO_SIZE
-                - (FILLER_STEP_SIZE_INCREASE * (route_len - 1))
-                - FINAL_NODE_META_INFO_LENGTH,
-        );
-
-        // return D || I || PAD
-        PaddedFinalRoutingInformation {
-            value: std::iter::once(self.flag)
-                .chain(self.version.to_bytes())
-                .chain(self.destination.as_bytes().iter().cloned())
-                .chain(self.identifier.iter().cloned())
-                .chain(padding.iter().cloned())
-                .collect(),
-        }
-    }
+    pub(super) fn add_padding(self, route_len: usize) -> PaddedFinalRoutingInformation { panic!("STUB: not implemented") }
 }
 
-// in paper D || I || 0
 pub(super) struct PaddedFinalRoutingInformation {
     value: Vec<u8>,
 }
@@ -98,56 +41,20 @@ impl PaddedFinalRoutingInformation {
         self,
         key: &StreamCipherKey,
         route_len: usize,
-    ) -> EncryptedPaddedFinalRoutingInformation {
-        debug_assert_eq!(
-            FinalRoutingInformation::max_padded_destination_identifier_length(route_len),
-            self.value.len()
-        );
-
-        let pseudorandom_bytes = crypto::generate_pseudorandom_bytes(
-            key,
-            &STREAM_CIPHER_INIT_VECTOR,
-            STREAM_CIPHER_OUTPUT_LENGTH,
-        );
-
-        EncryptedPaddedFinalRoutingInformation {
-            value: utils::bytes::xor(
-                &self.value,
-                &pseudorandom_bytes[..self.value.len()], // we already asserted it has correct length
-            ),
-        }
-    }
+    ) -> EncryptedPaddedFinalRoutingInformation { panic!("STUB: not implemented") }
 }
 
-// in paper XOR ( (D || I || 0), rho(h_{rho}(s)) )
 pub(super) struct EncryptedPaddedFinalRoutingInformation {
     value: Vec<u8>,
 }
 
 impl EncryptedPaddedFinalRoutingInformation {
-    // technically it's not exactly EncryptedRoutingInformation
-    // as it's EncryptedPaddedFinalRoutingInformation with possibly concatenated filler string
-    // however, for all of our purposes, it behaves exactly like EncryptedRoutingInformation
+    
     pub(super) fn combine_with_filler(
         self,
         filler: Filler,
         route_len: usize,
-    ) -> EncryptedRoutingInformation {
-        let filler_bytes: Vec<u8> = filler.into();
-        debug_assert_eq!(
-            filler_bytes.len(),
-            FILLER_STEP_SIZE_INCREASE * (route_len - 1)
-        );
-
-        let final_routing_info_vec: Vec<u8> = self.value.into_iter().chain(filler_bytes).collect();
-
-        // sanity check assertion, because we're using vectors
-        debug_assert_eq!(final_routing_info_vec.len(), ENCRYPTED_ROUTING_INFO_SIZE);
-        let mut final_routing_information = [0u8; ENCRYPTED_ROUTING_INFO_SIZE];
-        final_routing_information
-            .copy_from_slice(&final_routing_info_vec[..ENCRYPTED_ROUTING_INFO_SIZE]);
-        EncryptedRoutingInformation::from_bytes(final_routing_information)
-    }
+    ) -> EncryptedRoutingInformation { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -165,7 +72,7 @@ mod test_encapsulating_final_routing_information_and_mac {
 
     #[test]
     fn it_returns_mac_on_correct_data() {
-        // this test is created to ensure we MAC the encrypted data BEFORE it is truncated
+        
         let route = [random_node(), random_node(), random_node()];
         let expanded_shared_secret = [
             expanded_shared_secret_fixture(),

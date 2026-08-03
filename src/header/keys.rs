@@ -1,16 +1,3 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::INTEGRITY_MAC_KEY_SIZE;
 use crate::crypto::STREAM_CIPHER_KEY_SIZE;
@@ -27,35 +14,8 @@ pub struct KeyMaterial {
 }
 
 impl KeyMaterial {
-    // derive shared keys, group elements, blinding factors
-    pub fn derive(route: &[Node], initial_secret: &StaticSecret) -> Self {
-        let initial_shared_secret = PublicKey::from(initial_secret);
-
-        let mut expanded_shared_secrets = Vec::new();
-        let mut blinding_factors = Vec::new();
-
-        for (i, node) in route.iter().enumerate() {
-            let mut acc = node.pub_key;
-
-            // avoid having to clone the initial secret by just chaining iterators
-            for blinding_factor in std::iter::once(initial_secret).chain(&blinding_factors) {
-                let shared_secret = blinding_factor.diffie_hellman(&acc);
-                acc = PublicKey::from(shared_secret.to_bytes());
-            }
-
-            let expanded_shared_secret = expand_shared_secret(acc.as_bytes());
-
-            if i != route.len() - 1 {
-                blinding_factors.push(expanded_shared_secret.blinding_factor());
-            }
-            expanded_shared_secrets.push(expanded_shared_secret);
-        }
-
-        Self {
-            initial_shared_secret,
-            expanded_shared_secrets,
-        }
-    }
+    
+    pub fn derive(route: &[Node], initial_secret: &StaticSecret) -> Self { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -110,11 +70,7 @@ mod deriving_key_material {
         #[test]
         fn it_generates_correct_expanded_shared_secret() {
             let (route, initial_secret, key_material) = setup();
-            // The accumulator is the key to our blinding factors working.
-            // If the accumulator value isn't incremented correctly, we risk passing an
-            // incorrectly blinded shared key through the mixnet in the (unencrypted)
-            // Sphinx packet header. So this test ensures that the accumulator gets incremented
-            // properly on each run through the loop.
+            
             let mut expected_accumulator = vec![initial_secret];
             for (i, node) in route.iter().enumerate() {
                 let expected_shared_key =

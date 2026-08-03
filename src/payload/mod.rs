@@ -1,16 +1,3 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::SECURITY_PARAMETER;
 use crate::payload::key::{PayloadKey, SphinxPayloadKey};
@@ -27,22 +14,15 @@ pub mod key;
 type NymLionessDigest = Blake2bMac<U32>;
 pub type NymLioness = Lioness<ChaCha20, NymLionessDigest>;
 
-// payload consists of security parameter long zero-padding, plaintext and '1' byte to indicate start of padding
-// (it can optionally be followed by zero-padding
 pub const PAYLOAD_OVERHEAD_SIZE: usize = SECURITY_PARAMETER + 1;
 
-// TODO: question: is padding to some pre-defined length a sphinx-specific thing or rather
-// something for our particular use case?
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct Payload(Vec<u8>);
 
-// is_empty does not make sense in this context, as you can't construct an empty Payload
 #[allow(clippy::len_without_is_empty)]
 impl Payload {
-    /// Tries to encapsulate provided plaintext message inside a sphinx payload adding
-    /// as many layers of encryption as there are keys provided.
-    /// Note that the encryption layers are going to be added in *reverse* order!
+    
     pub fn encapsulate_message<K>(
         plaintext_message: &[u8],
         payload_keys: &[K],
@@ -50,177 +30,31 @@ impl Payload {
     ) -> Result<Self>
     where
         K: for<'a> SphinxPayloadKey<'a>,
-    {
-        Self::validate_parameters(payload_size, plaintext_message.len())?;
-        let mut payload = Self::set_final_payload(plaintext_message, payload_size);
+    { panic!("STUB: not implemented") }
 
-        // remember that we need to reverse the order of encryption
-        for payload_key in payload_keys.iter().rev() {
-            payload = payload.add_encryption_layer(payload_key.payload_key())?;
-        }
+    fn validate_parameters(payload_size: usize, plaintext_len: usize) -> Result<()> { panic!("STUB: not implemented") }
 
-        Ok(payload)
-    }
+    fn set_final_payload(plaintext_message: &[u8], payload_size: usize) -> Self { panic!("STUB: not implemented") }
 
-    /// Ensures the desires payload_size is longer than the required overhead as well
-    /// as the blocksize of lioness encryption.
-    /// It also checks if the plaintext can fit in the specified payload [size].
-    fn validate_parameters(payload_size: usize, plaintext_len: usize) -> Result<()> {
-        if payload_size < PAYLOAD_OVERHEAD_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                "specified payload_size is smaller than the required overhead",
-            ));
-        // lioness blocksize is 32 bytes (in this implementation)
-        // Technically this check shouldn't happen if you're not going to add any
-        // encryption layers to the payload, but then why are you even using sphinx?
-        } else if payload_size < NymLionessDigest::output_size() {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                "specified payload_size is smaller lioness block size",
-            ));
-        }
+    fn add_encryption_layer<P: Borrow<PayloadKey>>(mut self, payload_key: P) -> Result<Self> { panic!("STUB: not implemented") }
 
-        let maximum_plaintext_length = payload_size - PAYLOAD_OVERHEAD_SIZE;
-        if plaintext_len > maximum_plaintext_length {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                format!(
-                    "too long message provided. Message was: {plaintext_len}B long, maximum_plaintext_length is: {maximum_plaintext_length}B",
-                ),
-            ));
-        }
-        Ok(())
-    }
+    pub fn unwrap<P: Borrow<PayloadKey>>(mut self, payload_key: P) -> Result<Self> { panic!("STUB: not implemented") }
 
-    /// Attaches leading and trailing paddings of correct lengths to the provided plaintext message.
-    /// Note: this function should only ever be called in [`encapsulate_message`] after
-    /// [`validate_parameters`] was performed.
-    fn set_final_payload(plaintext_message: &[u8], payload_size: usize) -> Self {
-        let final_payload: Vec<u8> = std::iter::repeat_n(0u8, SECURITY_PARAMETER) // start with zero-padding
-            .chain(plaintext_message.iter().copied()) // put the plaintext
-            .chain(std::iter::once(1)) // add single 1 byte to indicate start of padding
-            .chain(std::iter::repeat(0u8)) // and fill everything else with zeroes
-            .take(payload_size) // take however much we need (remember, iterators are lazy)
-            .collect();
+    fn find_start_of_padding(&self) -> Result<usize> { panic!("STUB: not implemented") }
 
-        Payload(final_payload)
-    }
+    pub fn recover_plaintext(self) -> Result<Vec<u8>> { panic!("STUB: not implemented") }
 
-    /// Tries to add an additional layer of encryption onto self.
-    fn add_encryption_layer<P: Borrow<PayloadKey>>(mut self, payload_key: P) -> Result<Self> {
-        let lioness_cipher = NymLioness::new(payload_key.borrow().into());
+    fn into_inner(self) -> Vec<u8> { panic!("STUB: not implemented") }
 
-        if let Err(err) = lioness_cipher.encrypt_block(&mut self.0) {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                format!("error while encrypting payload: {err}"),
-            ));
-        };
-        Ok(self)
-    }
+    fn inner(&self) -> &[u8] { panic!("STUB: not implemented") }
 
-    /// Tries to remove single layer of encryption from self.
-    pub fn unwrap<P: Borrow<PayloadKey>>(mut self, payload_key: P) -> Result<Self> {
-        let lioness_cipher = NymLioness::new(payload_key.borrow().into());
+    pub fn len(&self) -> usize { panic!("STUB: not implemented") }
 
-        if let Err(err) = lioness_cipher.decrypt_block(&mut self.0) {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                format!("error while unwrapping payload: {err}"),
-            ));
-        };
-        Ok(self)
-    }
+    pub fn as_bytes(&self) -> &[u8] { panic!("STUB: not implemented") }
 
-    // attempt to find the index of the element indicating starting of the padding AFTER the initial
-    // SECURITY_PARAMETER 0s got ignored
-    // NOTE: this method must only be called after ensuring the internal vector is longer than `PAYLOAD_OVERHEAD_SIZE`
-    fn find_start_of_padding(&self) -> Result<usize> {
-        let padded_plaintext = &self.0[SECURITY_PARAMETER..];
-        padded_plaintext
-            .iter()
-            .rposition(|b| *b == 1)
-            .ok_or(Error::new(
-                ErrorKind::InvalidPayload,
-                "malformed payload - invalid trailing padding",
-            ))
-    }
+    pub fn into_bytes(self) -> Vec<u8> { panic!("STUB: not implemented") }
 
-    /// After calling [`unwrap`] required number of times with correct `payload_keys`, tries to parse
-    /// the resultant payload content into original encapsulated plaintext message.
-    pub fn recover_plaintext(self) -> Result<Vec<u8>> {
-        if self.len() < PAYLOAD_OVERHEAD_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                "malformed payload - no leading zero padding present",
-            ));
-        }
-
-        // assuming our payload is fully decrypted it has the following structure:
-        // 00000.... (SECURITY_PARAMETER length)
-        // plaintext (variable)
-        // 1 (single 1 byte)
-        // 0000 ... to pad to specified `payload_size`
-
-        // In order to recover the plaintext we need to ignore first SECURITY_PARAMETER bytes
-        // Then remove all tailing zeroes until first 1
-        // and finally remove the first 1. The result should be our plaintext.
-        // However, we must check if first SECURITY_PARAMETER bytes are actually 0
-        if !self.0.iter().take(SECURITY_PARAMETER).all(|b| *b == 0) {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                "malformed payload - no leading zero padding present",
-            ));
-        }
-
-        let padding_start = self.find_start_of_padding()?;
-        // take only bytes until the start of the padding (but not including it)
-        // and furthermore, remember to skip the initial 0s
-
-        Ok(self
-            .into_inner()
-            .into_iter()
-            .skip(SECURITY_PARAMETER)
-            .take(padding_start)
-            .collect())
-    }
-
-    fn into_inner(self) -> Vec<u8> {
-        self.0
-    }
-
-    fn inner(&self) -> &[u8] {
-        &self.0
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    /// View this `Payload` as slice of bytes.
-    pub fn as_bytes(&self) -> &[u8] {
-        self.inner()
-    }
-
-    /// Convert this `Payload` as a vector of bytes.
-    pub fn into_bytes(self) -> Vec<u8> {
-        self.into_inner()
-    }
-
-    /// Tries to recover `Payload` from a slice of bytes.
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        // with payloads being dynamic in size, the only thing we can do
-        // is to check if it at least is longer than the minimum length
-        if bytes.len() < PAYLOAD_OVERHEAD_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidPayload,
-                "too short payload provided",
-            ));
-        }
-
-        Ok(Payload(bytes.to_vec()))
-    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -268,29 +102,28 @@ mod final_payload_setting {
     fn adds_correct_padding() {
         let plaintext_lengths = vec![0, 1, 16, 128, 4096];
         for plaintext_length in plaintext_lengths {
-            // ensure payload always has correct length, because we're not testing for that
+            
             let payload_size = plaintext_length + lioness::DIGEST_RESULT_SIZE;
             let final_payload =
                 Payload::set_final_payload(&vec![42u8; plaintext_length], payload_size);
             let final_payload_inner = final_payload.into_inner();
 
-            // first SECURITY_PARAMETER bytes have to be 0
             assert!(final_payload_inner
                 .iter()
                 .take(SECURITY_PARAMETER)
                 .all(|&b| b == 0));
-            // then the actual message should follow
+            
             assert!(final_payload_inner
                 .iter()
                 .skip(SECURITY_PARAMETER)
                 .take(plaintext_length)
                 .all(|&b| b == 42));
-            // single one
+            
             assert_eq!(
                 final_payload_inner[SECURITY_PARAMETER + plaintext_length],
                 1
             );
-            // and the rest should be 0 padding
+            
             assert!(final_payload_inner
                 .iter()
                 .skip(SECURITY_PARAMETER + plaintext_length + 1)
@@ -398,7 +231,6 @@ mod plaintext_recovery {
         assert_eq!(message, recovered_plaintext);
     }
 
-    // tests for correct padding detection
     #[test]
     fn it_is_possible_to_recover_plaintext_even_if_is_just_ones() {
         let message = vec![1u8; 160];
@@ -422,7 +254,6 @@ mod plaintext_recovery {
         assert_eq!(message, recovered_plaintext);
     }
 
-    // tests for correct padding detection
     #[test]
     fn it_is_possible_to_recover_plaintext_even_if_is_just_zeroes() {
         let message = vec![0u8; 160];
@@ -460,7 +291,7 @@ mod plaintext_recovery {
 
         let unwrapped_payload = payload_keys
             .iter()
-            .skip(1) // 'forget' about one key to obtain invalid decryption
+            .skip(1) 
             .fold(encrypted_payload, |current_layer, payload_key| {
                 current_layer.unwrap(payload_key).unwrap()
             });
@@ -481,12 +312,10 @@ mod plaintext_recovery {
         let mut message2 = message;
         let key = [42u8; PAYLOAD_KEY_SIZE];
 
-        // generating the output with the old 'lioness' dep
         let legacy_lioness =
             lioness::Lioness::<blake2_08::VarBlake2b, chacha_03::ChaCha>::new_raw(&key);
         legacy_lioness.encrypt(&mut message).unwrap();
 
-        // updated dep
         let lioness = NymLioness::new((&key).into());
         lioness.encrypt_block(&mut message2).unwrap();
 

@@ -1,44 +1,14 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use rand::CryptoRng;
 
-// xor produces new Vector with the XOR result
-pub fn xor(a: &[u8], b: &[u8]) -> Vec<u8> {
-    assert_eq!(a.len(), b.len());
+pub fn xor(a: &[u8], b: &[u8]) -> Vec<u8> { panic!("STUB: not implemented") }
 
-    a.iter().zip(b.iter()).map(|(&x1, &x2)| x1 ^ x2).collect()
-}
-
-// xor_with xors assigns the result of xor to the first argument
-pub fn xor_with(a: &mut [u8], b: &[u8]) {
-    assert_eq!(a.len(), b.len());
-
-    a.iter_mut()
-        .zip(b.iter())
-        .map(|(x1, &x2)| *x1 ^= x2)
-        .collect()
-}
+pub fn xor_with(a: &mut [u8], b: &[u8]) { panic!("STUB: not implemented") }
 
 pub fn random<R>(rng: &mut R, number: usize) -> Vec<u8>
 where
     R: CryptoRng,
-{
-    let mut scalar_bytes = vec![0u8; number];
-    rng.fill_bytes(&mut scalar_bytes);
-    scalar_bytes
-}
+{ panic!("STUB: not implemented") }
 
 #[cfg(test)]
 mod test_xor_with {

@@ -1,16 +1,3 @@
-// Copyright 2020-2025 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::HEADER_INTEGRITY_MAC_SIZE;
 use crate::header::delays::Delay;
@@ -33,13 +20,12 @@ pub mod mac;
 pub mod routing;
 pub mod shared_secret;
 
-// 32 represents size of a MontgomeryPoint on Curve25519
 pub const HEADER_SIZE: usize = 32 + HEADER_INTEGRITY_MAC_SIZE + ENCRYPTED_ROUTING_INFO_SIZE;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone))]
 pub struct SphinxHeader {
-    /// Alpha element
+    
     pub shared_secret: PublicKey,
     pub routing_info: Box<EncapsulatedRoutingInformation>,
 }
@@ -63,40 +49,9 @@ pub enum ProcessedHeaderData {
 }
 
 impl ProcessedHeader {
-    pub(crate) fn payload_key(&self) -> &PayloadKey {
-        &self.payload_key
-    }
+    pub(crate) fn payload_key(&self) -> &PayloadKey { panic!("STUB: not implemented") }
 
-    pub(crate) fn attach_payload(self, payload: Payload) -> ProcessedPacket {
-        match self.data {
-            ProcessedHeaderData::ForwardHop {
-                updated_header,
-                next_hop_address,
-                delay,
-            } => ProcessedPacket {
-                version: self.version,
-                data: ProcessedPacketData::ForwardHop {
-                    next_hop_packet: SphinxPacket {
-                        header: updated_header,
-                        payload,
-                    },
-                    next_hop_address,
-                    delay,
-                },
-            },
-            ProcessedHeaderData::FinalHop {
-                destination,
-                identifier,
-            } => ProcessedPacket {
-                version: self.version,
-                data: ProcessedPacketData::FinalHop {
-                    destination,
-                    identifier,
-                    payload,
-                },
-            },
-        }
-    }
+    pub(crate) fn attach_payload(self, payload: Payload) -> ProcessedPacket { panic!("STUB: not implemented") }
 }
 
 impl SphinxHeader {
@@ -123,10 +78,7 @@ impl SphinxHeader {
         delays: &[Delay],
         destination: &Destination,
         version: Version,
-    ) -> BuiltHeader {
-        let key_material = keys::KeyMaterial::derive(route, initial_secret);
-        Self::build_header(key_material, route, delays, destination, version)
-    }
+    ) -> BuiltHeader { panic!("STUB: not implemented") }
 
     fn build_header(
         key_material: KeyMaterial,
@@ -134,195 +86,41 @@ impl SphinxHeader {
         delays: &[Delay],
         destination: &Destination,
         version: Version,
-    ) -> BuiltHeader {
-        let filler_string = Filler::new(&key_material.expanded_shared_secrets[..route.len() - 1]);
-        let routing_info = EncapsulatedRoutingInformation::new(
-            route,
-            destination,
-            delays,
-            &key_material.expanded_shared_secrets,
-            filler_string,
-            version,
-        );
+    ) -> BuiltHeader { panic!("STUB: not implemented") }
 
-        // encapsulate header.routing information, compute MACs
-        BuiltHeader::new(version, key_material, routing_info)
-    }
-
-    // note: this method is currently removed because there's too many branches to support
-    // with the legacy compatibility requirements.
-    // this will be revisited in the future
-    // /// Processes the header with the provided shared secret
-    // /// It could be useful in the situation where sender is re-using initial secret
-    // /// and we could cache processing results.
-    // ///
-    // /// However, unless you know exactly what you are doing, you should NEVER use this method!
-    // /// Prefer normal [process] instead.
-    // pub fn process_with_cached_secret(
-    //     &self,
-    //     expanded_secret: ExpandedSharedSecret,
-    //     cached_new_shared_secret: PublicKey,
-    // ) -> Result<ProcessedHeader> {
-    //     self.ensure_valid_mac(expanded_secret.header_integrity_hmac_key())?;
-    //
-    //     let unwrapped_routing_information = self
-    //         .routing_info
-    //         .enc_routing_information
-    //         .unwrap(expanded_secret.stream_cipher_key())?;
-    //
-    //     match unwrapped_routing_information.data {
-    //         ParsedRawRoutingInformationData::ForwardHop {
-    //             next_hop_address,
-    //             delay,
-    //             new_routing_information,
-    //         } => {
-    //             if let Some(new_blinded_secret) = cached_new_derived_secret {
-    //                 Ok(ProcessedHeader {
-    //                     payload_key: *expanded_secret.payload_key(),
-    //                     version: unwrapped_routing_information.version,
-    //                     data: ProcessedHeaderData::ForwardHop {
-    //                         updated_header: SphinxHeader {
-    //                             shared_secret: new_blinded_secret,
-    //                             routing_info: new_routing_information,
-    //                         },
-    //                         next_hop_address,
-    //                         delay,
-    //                     },
-    //                 })
-    //             } else {
-    //                 Err(Error::new(
-    //                     ErrorKind::InvalidHeader,
-    //                     "tried to process forward hop without blinded secret",
-    //                 ))
-    //             }
-    //         }
-    //         ParsedRawRoutingInformationData::FinalHop {
-    //             destination,
-    //             identifier,
-    //         } => Ok(ProcessedHeader {
-    //             payload_key: *expanded_secret.payload_key(),
-    //             version: unwrapped_routing_information.version,
-    //             data: ProcessedHeaderData::FinalHop {
-    //                 destination,
-    //                 identifier,
-    //             },
-    //         }),
-    //     }
-    // }
-
-    /// Processes the header with the provided expanded shared secret
-    /// It could be useful in the situation where caller has already derived the value,
-    /// because, for example, he had to obtain the reply tag.
     #[allow(deprecated)]
     pub fn process_with_expanded_secret(
         self,
         expanded_secret: &ExpandedSharedSecret,
-    ) -> Result<ProcessedHeader> {
-        self.ensure_header_integrity(expanded_secret)?;
-
-        let unwrapped_routing_information = self
-            .routing_info
-            .enc_routing_information
-            .unwrap(expanded_secret.stream_cipher_key())?;
-
-        Ok(
-            unwrapped_routing_information
-                .into_processed_header(self.shared_secret, expanded_secret),
-        )
-    }
+    ) -> Result<ProcessedHeader> { panic!("STUB: not implemented") }
 
     #[allow(deprecated)]
-    pub fn process(self, node_secret_key: &StaticSecret) -> Result<ProcessedHeader> {
-        let expanded_secret = self.compute_expanded_shared_secret(node_secret_key);
-        self.process_with_expanded_secret(&expanded_secret)
-    }
+    pub fn process(self, node_secret_key: &StaticSecret) -> Result<ProcessedHeader> { panic!("STUB: not implemented") }
 
-    /// Using the provided packet's alpha and node's secret key, expand it into the output of all required random oracles
     pub fn compute_expanded_shared_secret(
         &self,
         node_secret_key: &StaticSecret,
-    ) -> ExpandedSharedSecret {
-        node_secret_key
-            .diffie_hellman(&self.shared_secret)
-            .expand_shared_secret()
-    }
+    ) -> ExpandedSharedSecret { panic!("STUB: not implemented") }
 
     pub fn ensure_header_integrity(
         &self,
         expanded_shared_secret: &ExpandedSharedSecret,
-    ) -> Result<()> {
-        if !self.routing_info.integrity_mac.verify(
-            expanded_shared_secret.header_integrity_hmac_key(),
-            self.routing_info.enc_routing_information.as_ref(),
-        ) {
-            return Err(Error::new(
-                ErrorKind::InvalidHeader,
-                "failed to verify integrity MAC",
-            ));
-        }
-        Ok(())
-    }
+    ) -> Result<()> { panic!("STUB: not implemented") }
 
     #[deprecated]
     pub fn unchecked_process_as_current(
         self,
         node_secret_key: &StaticSecret,
-    ) -> Result<ProcessedHeader> {
-        let expanded_secret = self.compute_expanded_shared_secret(node_secret_key);
-        self.ensure_header_integrity(&expanded_secret)?;
+    ) -> Result<ProcessedHeader> { panic!("STUB: not implemented") }
 
-        let unwrapped_routing_information = self
-            .routing_info
-            .enc_routing_information
-            .unwrap(expanded_secret.stream_cipher_key())?;
+    pub fn to_bytes(&self) -> Vec<u8> { panic!("STUB: not implemented") }
 
-        Ok(unwrapped_routing_information
-            .into_processed_header(self.shared_secret, &expanded_secret))
-    }
-
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.shared_secret
-            .as_bytes()
-            .iter()
-            .cloned()
-            .chain(self.routing_info.to_bytes())
-            .collect()
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() != HEADER_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidHeader,
-                format!(
-                    "tried to recover using {} bytes, expected {}",
-                    bytes.len(),
-                    HEADER_SIZE
-                ),
-            ));
-        }
-
-        let mut shared_secret_bytes = [0u8; 32];
-        // first 32 bytes represent the shared secret
-        shared_secret_bytes.copy_from_slice(&bytes[..32]);
-        let shared_secret = PublicKey::from(shared_secret_bytes);
-
-        // the rest are for the encapsulated routing info
-        let routing_info = Box::new(EncapsulatedRoutingInformation::from_bytes(&bytes[32..])?);
-
-        Ok(SphinxHeader {
-            shared_secret,
-            routing_info,
-        })
-    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> { panic!("STUB: not implemented") }
 
     fn blind_the_shared_secret(
         shared_secret: PublicKey,
         blinding_factor: StaticSecret,
-    ) -> PublicKey {
-        // shared_secret * blinding_factor
-        let new_shared_secret = blinding_factor.diffie_hellman(&shared_secret);
-        PublicKey::from(new_shared_secret.to_bytes())
-    }
+    ) -> PublicKey { panic!("STUB: not implemented") }
 }
 
 pub(crate) struct BuiltHeader {
@@ -336,47 +134,15 @@ impl BuiltHeader {
         version: Version,
         key_material: KeyMaterial,
         routing_information: EncapsulatedRoutingInformation,
-    ) -> Self {
-        BuiltHeader {
-            header: SphinxHeader {
-                shared_secret: key_material.initial_shared_secret,
-                routing_info: Box::new(routing_information),
-            },
-            version,
-            expanded_secrets: key_material.expanded_shared_secrets,
-        }
-    }
+    ) -> Self { panic!("STUB: not implemented") }
 
-    // depending on the version either use the initial hkdf output as payload keys
-    // or extract the seed and run it through another hkdf
-    pub(crate) fn derive_payload_keys(&self) -> Vec<PayloadKey> {
-        if self.version.expects_legacy_full_payload_keys() {
-            self.legacy_full_payload_keys()
-        } else {
-            self.expanded_secrets
-                .iter()
-                .map(|s| derive_payload_key(s.payload_key_seed()))
-                .collect()
-        }
-    }
+    pub(crate) fn derive_payload_keys(&self) -> Vec<PayloadKey> { panic!("STUB: not implemented") }
 
-    pub(crate) fn legacy_full_payload_keys(&self) -> Vec<PayloadKey> {
-        self.expanded_secrets
-            .iter()
-            .map(|s| *s.legacy_payload_key())
-            .collect()
-    }
+    pub(crate) fn legacy_full_payload_keys(&self) -> Vec<PayloadKey> { panic!("STUB: not implemented") }
 
-    pub(crate) fn payload_key_seeds(&self) -> Vec<PayloadKeySeed> {
-        self.expanded_secrets
-            .iter()
-            .map(|s| *s.payload_key_seed())
-            .collect()
-    }
+    pub(crate) fn payload_key_seeds(&self) -> Vec<PayloadKeySeed> { panic!("STUB: not implemented") }
 
-    pub(crate) fn into_header(self) -> SphinxHeader {
-        self.header
-    }
+    pub(crate) fn into_header(self) -> SphinxHeader { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -415,7 +181,6 @@ mod create_and_process_sphinx_packet_header {
             SphinxHeader::new_current(&initial_secret, &route, &delays, &route_destination)
                 .into_header();
 
-        //let (new_header, next_hop_address, _) = sphinx_header.process(node1_sk).unwrap();
         let new_header = match sphinx_header.process(&node1_sk).unwrap().data {
             ProcessedHeaderData::ForwardHop {
                 updated_header,
@@ -476,7 +241,7 @@ mod unwrap_routing_information {
     fn it_returns_correct_unwrapped_routing_information() {
         let mut routing_info = [9u8; ENCRYPTED_ROUTING_INFO_SIZE];
         routing_info[0] = FORWARD_HOP;
-        // reserved 0 byte for version
+        
         routing_info[1] = 0;
 
         let stream_cipher_key = [1u8; crypto::STREAM_CIPHER_KEY_SIZE];

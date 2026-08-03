@@ -1,16 +1,3 @@
-// Copyright 2025 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::{
     BLINDING_FACTOR_SIZE, EXPANDED_SHARED_SECRET_HKDF_INFO, EXPANDED_SHARED_SECRET_HKDF_SALT,
@@ -32,100 +19,40 @@ pub(crate) trait ExpandSecret {
 }
 
 impl ExpandSecret for PublicKey {
-    fn expand_shared_secret(&self) -> ExpandedSharedSecret {
-        self.as_bytes().expand_shared_secret()
-    }
+    fn expand_shared_secret(&self) -> ExpandedSharedSecret { panic!("STUB: not implemented") }
 }
 
 impl ExpandSecret for SharedSecret {
-    fn expand_shared_secret(&self) -> ExpandedSharedSecret {
-        self.as_bytes().expand_shared_secret()
-    }
+    fn expand_shared_secret(&self) -> ExpandedSharedSecret { panic!("STUB: not implemented") }
 }
 
 impl ExpandSecret for [u8; 32] {
-    fn expand_shared_secret(&self) -> ExpandedSharedSecret {
-        expand_shared_secret(self)
-    }
+    fn expand_shared_secret(&self) -> ExpandedSharedSecret { panic!("STUB: not implemented") }
 }
 
 #[derive(Zeroize, ZeroizeOnDrop, Clone, PartialEq, Debug)]
 pub struct ExpandedSharedSecret([u8; EXPANDED_SHARED_SECRET_LENGTH]);
 
 impl ExpandedSharedSecret {
-    // order of bytes is quite important here to preserve backwards compatibility.
-    // replay tag has not been used before so it **has to** be created last
+    
+    pub(crate) fn stream_cipher_key(&self) -> &StreamCipherKey { panic!("STUB: not implemented") }
 
-    /// Output of the hρ random oracle
-    pub(crate) fn stream_cipher_key(&self) -> &StreamCipherKey {
-        array_ref!(&self.0, 0, STREAM_CIPHER_KEY_SIZE)
-    }
+    pub(crate) fn header_integrity_hmac_key(&self) -> &HeaderIntegrityMacKey { panic!("STUB: not implemented") }
 
-    /// Output of the hμ random oracle
-    pub(crate) fn header_integrity_hmac_key(&self) -> &HeaderIntegrityMacKey {
-        array_ref!(&self.0, STREAM_CIPHER_KEY_SIZE, INTEGRITY_MAC_KEY_SIZE)
-    }
+    pub(crate) fn legacy_payload_key(&self) -> &PayloadKey { panic!("STUB: not implemented") }
 
-    /// Legacy output of the hπ random oracle
-    // NOTE: currently we expand it to full PRP key
-    pub(crate) fn legacy_payload_key(&self) -> &PayloadKey {
-        array_ref!(
-            &self.0,
-            STREAM_CIPHER_KEY_SIZE + INTEGRITY_MAC_KEY_SIZE,
-            PAYLOAD_KEY_SIZE
-        )
-    }
+    pub(crate) fn payload_key_seed(&self) -> &[u8; PAYLOAD_KEY_SEED_SIZE] { panic!("STUB: not implemented") }
 
-    /// Output of the hπ random oracle
-    pub(crate) fn payload_key_seed(&self) -> &[u8; PAYLOAD_KEY_SEED_SIZE] {
-        array_ref!(
-            &self.0,
-            STREAM_CIPHER_KEY_SIZE + INTEGRITY_MAC_KEY_SIZE,
-            PAYLOAD_KEY_SEED_SIZE
-        )
-    }
+    pub(crate) fn blinding_factor_bytes(&self) -> &[u8; BLINDING_FACTOR_SIZE] { panic!("STUB: not implemented") }
 
-    /// Output of the hb random oracle
-    pub(crate) fn blinding_factor_bytes(&self) -> &[u8; BLINDING_FACTOR_SIZE] {
-        array_ref!(
-            &self.0,
-            STREAM_CIPHER_KEY_SIZE + INTEGRITY_MAC_KEY_SIZE + PAYLOAD_KEY_SIZE,
-            BLINDING_FACTOR_SIZE
-        )
-    }
+    pub(crate) fn blinding_factor(&self) -> StaticSecret { panic!("STUB: not implemented") }
 
-    pub(crate) fn blinding_factor(&self) -> StaticSecret {
-        StaticSecret::from(*self.blinding_factor_bytes())
-    }
+    pub(crate) fn blind_shared_secret(&self, shared_secret: PublicKey) -> PublicKey { panic!("STUB: not implemented") }
 
-    pub(crate) fn blind_shared_secret(&self, shared_secret: PublicKey) -> PublicKey {
-        SphinxHeader::blind_the_shared_secret(shared_secret, self.blinding_factor())
-    }
-
-    /// Output of the h𝜏 random oracle
-    pub fn replay_tag(&self) -> &[u8; REPLAY_TAG_SIZE] {
-        array_ref!(
-            &self.0,
-            STREAM_CIPHER_KEY_SIZE
-                + INTEGRITY_MAC_KEY_SIZE
-                + PAYLOAD_KEY_SIZE
-                + BLINDING_FACTOR_SIZE,
-            REPLAY_TAG_SIZE
-        )
-    }
+    pub fn replay_tag(&self) -> &[u8; REPLAY_TAG_SIZE] { panic!("STUB: not implemented") }
 }
 
-pub(crate) fn expand_shared_secret(shared_secret: &[u8; 32]) -> ExpandedSharedSecret {
-    let hkdf = Hkdf::<Sha256>::new(Some(EXPANDED_SHARED_SECRET_HKDF_SALT), shared_secret);
-
-    let mut output = [0u8; EXPANDED_SHARED_SECRET_LENGTH];
-    // SAFETY: the length of the provided okm is within the allowed range
-    #[allow(clippy::unwrap_used)]
-    hkdf.expand(EXPANDED_SHARED_SECRET_HKDF_INFO, &mut output)
-        .unwrap();
-
-    ExpandedSharedSecret(output)
-}
+pub(crate) fn expand_shared_secret(shared_secret: &[u8; 32]) -> ExpandedSharedSecret { panic!("STUB: not implemented") }
 
 #[cfg(test)]
 mod expanding_shared_secret {
@@ -139,7 +66,6 @@ mod expanding_shared_secret {
         assert_zeroize_on_drop::<ExpandedSharedSecret>();
     }
 
-    // using old values from legacy `RoutingKeys`
     #[test]
     fn results_in_same_values_as_old_implementation() {
         let mut rng = seeded_rng([1u8; 32]);

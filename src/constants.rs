@@ -1,26 +1,12 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::crypto;
 use digest::consts::U16;
 use sha2::Sha256;
 
-pub const SECURITY_PARAMETER: usize = 16; // k in the Sphinx paper. Measured in bytes; 128 bits.
-pub const MAX_PATH_LENGTH: usize = 5; // r in the Sphinx paper
+pub const SECURITY_PARAMETER: usize = 16; 
+pub const MAX_PATH_LENGTH: usize = 5; 
 pub const BLINDING_FACTOR_SIZE: usize = 2 * SECURITY_PARAMETER;
 
-/// Output of the h𝜏 hash function / random oracle
 pub const REPLAY_TAG_SIZE: usize = 2 * SECURITY_PARAMETER;
 
 pub const EXPANDED_SHARED_SECRET_LENGTH: usize = crypto::STREAM_CIPHER_KEY_SIZE
@@ -37,27 +23,22 @@ pub const IDENTIFIER_LENGTH: usize = SECURITY_PARAMETER;
 pub const INTEGRITY_MAC_KEY_SIZE: usize = SECURITY_PARAMETER;
 pub const HEADER_INTEGRITY_MAC_SIZE: usize = SECURITY_PARAMETER;
 pub const PAYLOAD_KEY_SEED_SIZE: usize = SECURITY_PARAMETER;
-pub const PAYLOAD_KEY_SIZE: usize = 192; // must be 192 because of the Lioness implementation we're using
-pub const DELAY_LENGTH: usize = 8; // how many bytes we will use to encode the delay
+pub const PAYLOAD_KEY_SIZE: usize = 192; 
+pub const DELAY_LENGTH: usize = 8; 
 pub const NODE_META_INFO_SIZE: usize =
-    NODE_ADDRESS_LENGTH + FLAG_LENGTH + DELAY_LENGTH + VERSION_LENGTH; // the meta info is all the information from sender to the node like: where to forward the packet, what is the delay etc
+    NODE_ADDRESS_LENGTH + FLAG_LENGTH + DELAY_LENGTH + VERSION_LENGTH; 
 pub const FINAL_NODE_META_INFO_LENGTH: usize =
-    DESTINATION_ADDRESS_LENGTH + IDENTIFIER_LENGTH + FLAG_LENGTH + VERSION_LENGTH; // the meta info for the final hop might be of a different size
+    DESTINATION_ADDRESS_LENGTH + IDENTIFIER_LENGTH + FLAG_LENGTH + VERSION_LENGTH; 
 pub const FLAG_LENGTH: usize = 1;
 pub const PAYLOAD_SIZE: usize = 1024;
-pub const VERSION_LENGTH: usize = 3; // since version is represented as 3 u8 values: major, minor and patch
-                                     // we need the single byte to detect padding length
-
+pub const VERSION_LENGTH: usize = 3; 
+                                     
 #[deprecated(note = "use EXPANDED_SHARED_SECRET_HKDF_INFO instead")]
 pub const HKDF_INPUT_SEED: &[u8] = EXPANDED_SHARED_SECRET_HKDF_INFO;
 
-// content due to legacy reasons
 pub const EXPANDED_SHARED_SECRET_HKDF_INFO: &[u8] =
     b"Dwste mou enan moxlo arketa makru kai ena upomoxlio gia na ton topothetisw kai tha kinisw thn gh.";
 
-// unfortunately for legacy compatibility reasons, we have to be using an empty salt
-// (nodes need to be able to unconditionally recover version information from the header in order to
-// decide on further processing. this value is behind the initial hkdf
 pub const EXPANDED_SHARED_SECRET_HKDF_SALT: &[u8] = b"";
 
 pub const PAYLOAD_KEY_HKDF_INFO: &[u8] = b"sphinx-payload-key-V01-CS01-HKDF:SHA256-INFO";
@@ -65,7 +46,6 @@ pub const PAYLOAD_KEY_HKDF_SALT: &[u8] = b"sphinx-payload-key-V01-CS01-HKDF:SHA2
 
 pub type HeaderIntegrityMacSize = U16;
 
-// TODO: to replace with Blake3
 pub type HeaderIntegrityHmacAlgorithm = Sha256;
 
 #[cfg(test)]

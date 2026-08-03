@@ -1,16 +1,3 @@
-// Copyright 2020 Nym Technologies SA
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use crate::constants::{HEADER_INTEGRITY_MAC_SIZE, MAX_PATH_LENGTH, NODE_META_INFO_SIZE};
 use crate::header::delays::Delay;
@@ -46,12 +33,7 @@ impl EncapsulatedRoutingInformation {
     pub(crate) fn encapsulate(
         enc_routing_information: EncryptedRoutingInformation,
         integrity_mac: HeaderIntegrityMac,
-    ) -> Self {
-        Self {
-            enc_routing_information,
-            integrity_mac,
-        }
-    }
+    ) -> Self { panic!("STUB: not implemented") }
 
     pub(crate) fn new(
         route: &[Node],
@@ -60,26 +42,7 @@ impl EncapsulatedRoutingInformation {
         expanded_shared_secrets: &[ExpandedSharedSecret],
         filler: Filler,
         version: Version,
-    ) -> Self {
-        assert_eq!(route.len(), expanded_shared_secrets.len());
-        assert_eq!(delays.len(), route.len());
-
-        let final_keys = match expanded_shared_secrets.last() {
-            Some(k) => k,
-            None => panic!("empty keys"),
-        };
-
-        let encapsulated_destination_routing_info =
-            Self::for_final_hop(destination, final_keys, filler, route.len(), version);
-
-        Self::for_forward_hops(
-            encapsulated_destination_routing_info,
-            delays,
-            route,
-            expanded_shared_secrets,
-            version,
-        )
-    }
+    ) -> Self { panic!("STUB: not implemented") }
 
     fn for_final_hop(
         dest: &Destination,
@@ -87,95 +50,19 @@ impl EncapsulatedRoutingInformation {
         filler: Filler,
         route_len: usize,
         version: Version,
-    ) -> Self {
-        FinalRoutingInformation::new(dest, route_len, version)
-            .add_padding(route_len) // add padding to obtain correct destination length
-            .encrypt(expanded_shared_secret.stream_cipher_key(), route_len) // encrypt with the key of final node (in our case service provider)
-            .combine_with_filler(filler, route_len) // add filler to get header of correct length
-            .encapsulate_with_mac(expanded_shared_secret.header_integrity_hmac_key())
-        // combine the previous data with a MAC on the header (also calculated with the SPs key)
-    }
+    ) -> Self { panic!("STUB: not implemented") }
 
     fn for_forward_hops(
         encapsulated_destination_routing_info: Self,
         delays: &[Delay],
-        route: &[Node], // [Mix0, Mix1, Mix2, ..., Mix_{v-1}, Mix_v]
-        expanded_shared_secrets: &[ExpandedSharedSecret], // [Keys0, Keys1, Keys2, ..., Keys_{v-1}, Keys_v]
+        route: &[Node], 
+        expanded_shared_secrets: &[ExpandedSharedSecret], 
         version: Version,
-    ) -> Self {
-        route
-            .iter()
-            .skip(1) // we don't want the first element as person creating the packet knows the address of the first hop
-            .map(|node| node.address.to_bytes()) // we only care about the address field
-            .zip(
-                // we need both route (i.e. address field) and corresponding keys of the PREVIOUS hop
-                expanded_shared_secrets
-                    .iter()
-                    .take(expanded_shared_secrets.len() - 1), // we don't want last element - it was already used to encrypt the destination
-            )
-            .zip(delays.iter().take(delays.len() - 1)) // no need for the delay for the final node
-            .rev() // we are working from the 'inside'
-            // we should be getting here
-            // [(Mix_v, Keys_{v-1}, Delay_{v-1}), (Mix_{v-1}, Keys_{v-2}, Delay_{v-2}), ..., (Mix2, Keys1, Delay1), (Mix1, Keys0, Delay0)]
-            .fold(
-                // we start from the already created encrypted final routing info and mac for the destination
-                // (encrypted with Keys_v)
-                encapsulated_destination_routing_info,
-                |next_hop_encapsulated_routing_information,
-                 ((current_node_address, previous_node), delay)| {
-                    RoutingInformation::new(
-                        NodeAddressBytes::from_bytes(current_node_address),
-                        delay.to_owned(),
-                        next_hop_encapsulated_routing_information,
-                        version,
-                    )
-                    .encrypt(previous_node.stream_cipher_key())
-                    .encapsulate_with_mac(previous_node.header_integrity_hmac_key())
-                },
-            )
-    }
+    ) -> Self { panic!("STUB: not implemented") }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.integrity_mac
-            .as_bytes()
-            .iter()
-            .copied()
-            .chain(self.enc_routing_information.as_ref().iter().copied())
-            .collect()
-    }
+    pub fn to_bytes(&self) -> Vec<u8> { panic!("STUB: not implemented") }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() != HEADER_INTEGRITY_MAC_SIZE + ENCRYPTED_ROUTING_INFO_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidRouting,
-                format!(
-                    "tried to recover routing information using {} bytes, expected {}",
-                    bytes.len(),
-                    HEADER_INTEGRITY_MAC_SIZE + ENCRYPTED_ROUTING_INFO_SIZE
-                ),
-            ));
-        }
-
-        let mut integrity_mac_bytes = [0u8; HEADER_INTEGRITY_MAC_SIZE];
-        let mut enc_routing_info_bytes = [0u8; ENCRYPTED_ROUTING_INFO_SIZE];
-
-        // first bytes represent the mac
-        integrity_mac_bytes.copy_from_slice(&bytes[..HEADER_INTEGRITY_MAC_SIZE]);
-        // the rest are for the routing info
-        enc_routing_info_bytes.copy_from_slice(
-            &bytes[HEADER_INTEGRITY_MAC_SIZE
-                ..HEADER_INTEGRITY_MAC_SIZE + ENCRYPTED_ROUTING_INFO_SIZE],
-        );
-
-        let integrity_mac = HeaderIntegrityMac::from_bytes(integrity_mac_bytes);
-        let enc_routing_information =
-            EncryptedRoutingInformation::from_bytes(enc_routing_info_bytes);
-
-        Ok(EncapsulatedRoutingInformation {
-            enc_routing_information,
-            integrity_mac,
-        })
-    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -300,7 +187,7 @@ mod encapsulating_forward_routing_information {
 
     #[test]
     fn it_correctly_generates_sphinx_routing_information_for_route_of_length_3() {
-        // this is basically loop unwrapping, but considering the complex logic behind it, it's warranted
+        
         let route = [random_node(), random_node(), random_node()];
         let destination = destination_fixture();
         let delay0 = Delay::new_from_nanos(10);
@@ -326,7 +213,6 @@ mod encapsulating_forward_routing_information {
 
         let destination_routing_info_copy = destination_routing_info.clone();
 
-        // sanity check to make sure our 'copy' worked
         assert_eq!(
             destination_routing_info
                 .enc_routing_information
@@ -362,7 +248,6 @@ mod encapsulating_forward_routing_information {
         .encrypt(routing_keys[1].stream_cipher_key())
         .encapsulate_with_mac(routing_keys[1].header_integrity_hmac_key());
 
-        // this is what first mix should receive
         let layer_0_routing = RoutingInformation::new(
             route[1].address,
             delay0,
@@ -383,21 +268,9 @@ mod encapsulating_forward_routing_information {
     }
     #[test]
     fn it_correctly_generates_sphinx_routing_information_for_route_of_max_length() {
-        // this is basically loop unwrapping, but considering the complex iterator, it's warranted
-        assert_eq!(5, MAX_PATH_LENGTH); // make sure we catch it if we decided to change the constant
+        
+        assert_eq!(5, MAX_PATH_LENGTH); 
 
-        /* since we're using max path length we expect literally:
-        n4 || m4 || n3 || m3 || n2 || m2 || n1 || m1 || d || i || p
-        // so literally no filler!
-        where:
-        {n1, n2, ...} are node addresses
-        {m1, m2, ...} are macs on previous layers
-        d is destination address
-        i is destination identifier
-        p is destination padding
-        */
-        // TODO: IMPLEMENT SPHINX HEADER LAYER UNWRAPPING
-        // HOWEVER! to test it, we need to first wrap function to unwrap header layer because each consecutive (ni, mi) pair is encrypted
     }
 }
 

@@ -10,7 +10,6 @@ use header::{SphinxHeader, HEADER_SIZE};
 use std::fmt;
 use x25519_dalek::StaticSecret;
 
-// legacy compatibility wrapper
 #[derive(Debug)]
 enum PayloadKeysMaterial {
     DerivedKeys(Vec<PayloadKey>),
@@ -18,52 +17,9 @@ enum PayloadKeysMaterial {
 }
 
 impl PayloadKeysMaterial {
-    fn from_bytes(bytes: &[u8]) -> Result<PayloadKeysMaterial> {
-        // given that our maximum path length is 5, payload key is 192 and key seed is 16,
-        // the maximum possible size of 'updated' surb seeds is 5*16 = 80, which is smaller than
-        // a single key, and thus we can use this information in order to determine which variant we should attempt to parse
-        if bytes.len() < PAYLOAD_KEY_SIZE {
-            // seeds
-            if !bytes.len().is_multiple_of(PAYLOAD_KEY_SEED_SIZE) {
-                return Err(Error::new(
-                    ErrorKind::InvalidSURB,
-                    "bytes of invalid length provided",
-                ));
-            }
-            let seeds_count = bytes.len() / PAYLOAD_KEY_SEED_SIZE;
-            let mut payload_key_seeds = Vec::with_capacity(seeds_count);
-            for i in 0..seeds_count {
-                let mut payload_key = [0u8; PAYLOAD_KEY_SEED_SIZE];
-                payload_key.copy_from_slice(
-                    &bytes[i * PAYLOAD_KEY_SEED_SIZE..(i + 1) * PAYLOAD_KEY_SEED_SIZE],
-                );
-                payload_key_seeds.push(payload_key);
-            }
-            Ok(PayloadKeysMaterial::KeySeeds(payload_key_seeds))
-        } else {
-            // full keys
-            if !bytes.len().is_multiple_of(PAYLOAD_KEY_SIZE) {
-                return Err(Error::new(
-                    ErrorKind::InvalidSURB,
-                    "bytes of invalid length provided",
-                ));
-            }
-            let key_count = bytes.len() / PAYLOAD_KEY_SIZE;
-            let mut payload_keys = Vec::with_capacity(key_count);
-            for i in 0..key_count {
-                let mut payload_key = [0u8; PAYLOAD_KEY_SIZE];
-                payload_key
-                    .copy_from_slice(&bytes[i * PAYLOAD_KEY_SIZE..(i + 1) * PAYLOAD_KEY_SIZE]);
-                payload_keys.push(payload_key);
-            }
-            Ok(PayloadKeysMaterial::DerivedKeys(payload_keys))
-        }
-    }
+    fn from_bytes(bytes: &[u8]) -> Result<PayloadKeysMaterial> { panic!("STUB: not implemented") }
 }
 
-/// A Single Use Reply Block (SURB) must have a pre-aggregated Sphinx header,
-/// the address of the first hop in the route of the SURB, and the key material
-/// used to layer encrypt the payload.
 #[allow(non_snake_case)]
 pub struct SURB {
     SURB_header: header::SphinxHeader,
@@ -72,13 +28,7 @@ pub struct SURB {
 }
 
 impl fmt::Debug for SURB {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SURB")
-            .field("SURB_header", &self.SURB_header)
-            .field("first_hop_address", &self.first_hop_address)
-            .field("payload_keys_material", &self.payload_keys_material)
-            .finish()
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { panic!("STUB: not implemented") }
 }
 
 pub struct SURBMaterial {
@@ -89,156 +39,34 @@ pub struct SURBMaterial {
 }
 
 impl SURBMaterial {
-    pub fn new(route: Vec<Node>, delays: Vec<Delay>, destination: Destination) -> Self {
-        SURBMaterial {
-            surb_route: route,
-            surb_delays: delays,
-            surb_destination: destination,
-            version: Default::default(),
-        }
-    }
+    pub fn new(route: Vec<Node>, delays: Vec<Delay>, destination: Destination) -> Self { panic!("STUB: not implemented") }
 
     #[allow(non_snake_case)]
-    pub fn construct_SURB(self) -> Result<SURB> {
-        let surb_initial_secret = StaticSecret::random();
-        SURB::new(surb_initial_secret, self)
-    }
+    pub fn construct_SURB(self) -> Result<SURB> { panic!("STUB: not implemented") }
 
     #[must_use]
-    pub fn with_version(mut self, version: Version) -> Self {
-        self.version = version;
-        self
-    }
+    pub fn with_version(mut self, version: Version) -> Self { panic!("STUB: not implemented") }
 }
 
 #[allow(non_snake_case)]
 impl SURB {
-    pub fn new(surb_initial_secret: StaticSecret, surb_material: SURBMaterial) -> Result<Self> {
-        let surb_route = surb_material.surb_route;
-        let surb_delays = surb_material.surb_delays;
-        let surb_destination = surb_material.surb_destination;
+    pub fn new(surb_initial_secret: StaticSecret, surb_material: SURBMaterial) -> Result<Self> { panic!("STUB: not implemented") }
 
-        /* Pre-computes the header of the Sphinx packet which will be used as SURB
-        and encapsulates it into struct together with the address of the first hop in the route of the SURB, and the key material
-        which should be used to layer encrypt the payload. */
-        let Some(first_hop) = surb_route.first() else {
-            return Err(Error::new(
-                ErrorKind::InvalidSURB,
-                "tried to create SURB for an empty route",
-            ));
-        };
-
-        if surb_route.len() != surb_delays.len() {
-            return Err(Error::new(ErrorKind::InvalidSURB, format!("creating SURB for contradictory data: route has len {} while there are {} delays generated", surb_route.len(), surb_delays.len())));
-        }
-
-        #[allow(deprecated)]
-        let built_header = header::SphinxHeader::new_versioned(
-            &surb_initial_secret,
-            &surb_route,
-            &surb_delays,
-            &surb_destination,
-            surb_material.version,
-        );
-
-        if surb_material.version.expects_legacy_full_payload_keys() {
-            Ok(SURB {
-                first_hop_address: first_hop.address,
-                payload_keys_material: PayloadKeysMaterial::DerivedKeys(
-                    built_header.legacy_full_payload_keys(),
-                ),
-                SURB_header: built_header.into_header(),
-            })
-        } else {
-            Ok(SURB {
-                first_hop_address: first_hop.address,
-                payload_keys_material: PayloadKeysMaterial::KeySeeds(
-                    built_header.payload_key_seeds(),
-                ),
-                SURB_header: built_header.into_header(),
-            })
-        }
-    }
-
-    /// Function takes the precomputed surb header, layer encrypts the plaintext payload content
-    /// using the precomputed payload key material and returns the full Sphinx packet
-    /// together with the address of first hop to which it should be forwarded.
     pub fn use_surb(
         self,
         plaintext_message: &[u8],
         payload_size: usize,
-    ) -> Result<(SphinxPacket, NodeAddressBytes)> {
-        let header = self.SURB_header;
+    ) -> Result<(SphinxPacket, NodeAddressBytes)> { panic!("STUB: not implemented") }
 
-        // Note that Payload::encapsulate_message performs checks to verify whether the plaintext
-        // is going to fit in the packet.
-        let payload = match self.payload_keys_material {
-            PayloadKeysMaterial::DerivedKeys(keys) => {
-                Payload::encapsulate_message(plaintext_message, keys.as_slice(), payload_size)?
-            }
-            PayloadKeysMaterial::KeySeeds(seeds) => {
-                Payload::encapsulate_message(plaintext_message, &seeds, payload_size)?
-            }
-        };
+    pub fn to_bytes(&self) -> Vec<u8> { panic!("STUB: not implemented") }
 
-        Ok((SphinxPacket { header, payload }, self.first_hop_address))
-    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> { panic!("STUB: not implemented") }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let initial_bytes = self
-            .SURB_header
-            .to_bytes()
-            .into_iter()
-            .chain(self.first_hop_address.to_bytes());
+    pub fn first_hop(&self) -> NodeAddressBytes { panic!("STUB: not implemented") }
 
-        match &self.payload_keys_material {
-            PayloadKeysMaterial::DerivedKeys(keys) => initial_bytes
-                .chain(keys.iter().flat_map(|k| k.iter().copied()))
-                .collect(),
-            PayloadKeysMaterial::KeySeeds(seeds) => initial_bytes
-                .chain(seeds.iter().flat_map(|s| s.iter().copied()))
-                .collect(),
-        }
-    }
+    pub fn materials_count(&self) -> usize { panic!("STUB: not implemented") }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        // SURB needs to contain AT LEAST a single payload key (or seed)
-        if bytes.len() < HEADER_SIZE + NODE_ADDRESS_LENGTH + PAYLOAD_KEY_SEED_SIZE {
-            return Err(Error::new(
-                ErrorKind::InvalidSURB,
-                "not enough bytes provided to try to recover a SURB",
-            ));
-        }
-
-        let header_bytes = &bytes[..HEADER_SIZE];
-        let first_hop_bytes = &bytes[HEADER_SIZE..HEADER_SIZE + NODE_ADDRESS_LENGTH];
-        let payload_keys_material_bytes = &bytes[HEADER_SIZE + NODE_ADDRESS_LENGTH..];
-
-        let SURB_header = SphinxHeader::from_bytes(header_bytes)?;
-        let first_hop_address = NodeAddressBytes::try_from_byte_slice(first_hop_bytes)?;
-        let payload_keys_material = PayloadKeysMaterial::from_bytes(payload_keys_material_bytes)?;
-
-        Ok(SURB {
-            SURB_header,
-            first_hop_address,
-            payload_keys_material,
-        })
-    }
-
-    pub fn first_hop(&self) -> NodeAddressBytes {
-        self.first_hop_address
-    }
-
-    pub fn materials_count(&self) -> usize {
-        match &self.payload_keys_material {
-            PayloadKeysMaterial::DerivedKeys(keys) => keys.len(),
-            PayloadKeysMaterial::KeySeeds(seeds) => seeds.len(),
-        }
-    }
-
-    pub fn uses_key_seeds(&self) -> bool {
-        matches!(self.payload_keys_material, PayloadKeysMaterial::KeySeeds(_))
-    }
+    pub fn uses_key_seeds(&self) -> bool { panic!("STUB: not implemented") }
 }
 
 #[cfg(test)]
@@ -393,7 +221,6 @@ mod prepare_and_use_process_surb {
             assert_eq!(original_keys[i], recovered_keys[i])
         }
 
-        // TODO: saner way of comparing headers...
         assert_eq!(
             dummy_SURB.SURB_header.to_bytes(),
             dummy_SURB.SURB_header.to_bytes()
@@ -426,7 +253,6 @@ mod prepare_and_use_process_surb {
             assert_eq!(original_seeds[i], recovered_seeds[i])
         }
 
-        // TODO: saner way of comparing headers...
         assert_eq!(
             dummy_SURB.SURB_header.to_bytes(),
             dummy_SURB.SURB_header.to_bytes()
